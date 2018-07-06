@@ -1,6 +1,7 @@
 library(Rcrawler)
 library(rvest)
 library(tm)
+library(beepr)
 
 url <- "https://www.finextra.com/"
 
@@ -43,12 +44,17 @@ titleSelector <- ".left.fullWidth:not(.left.fullWidth.upper.fontColorOne)"
 tagSelector <- ".ncMetaDataSnippet"
 statsSelector <- "#ctl00_ctl00_ConMainBody_ConMainBody_ctl01_lblInfo"
 
-crawler <- function(iterations, url, path) {
+months <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+
+crawler <- function(iterations, url, path, step = 10) {
   links <- list(url)
   scannedLinks <- c()
   for (i in 0:iterations) {
     tmp <- links
     for (j in seq.int(length(links))) {
+      if (j%%step == 0 ) {
+        print(sprintf("%s/%s : %s/%s", i, iterations, length(scannedLinks), length(tmp)))
+      }
       link <- links[j][[1]]
       if (!(link %in% scannedLinks)) {
         pageLinks <- LinkExtractor(link)[[2]]
@@ -88,14 +94,14 @@ parser <- function(links, limit = 0, step = 1) {
   
   for(i in seq.int(l)) {
     if (i %% step == 0) {
-      progress_bar <- paste(c("[", lapply(seq.int(10), function(x, progress) {
+      progress_bar <- paste(c("[", lapply(seq.int(25), function(x, progress) {
         if (x <= progress) {
           "#"
         } else {
           " "
         }
-      }, round(i/l*10)), "] "), sep = "", collapse = "")
-      stepindicator <- sprintf("%s/%s", i, l, sep = ",")
+      }, round(i/l*25)), "] "), sep = "", collapse = "")
+      stepindicator <- sprintf("%s/%s", i, l)
       print(paste(c( progress_bar, stepindicator), sep = "", collapse = ""))
     }
     link <- links[[i]]  
@@ -111,14 +117,12 @@ parser <- function(links, limit = 0, step = 1) {
       tags <- paste(lapply(tags_nodes, function(x) html_text(x)), collapse = ",")
       df$postTags[i] <- tags 
     }
-    
     stats_node <- html_node(html, statsSelector)
     text <- html_text(stats_node)
     text <- stripWhitespace(text)
     splitText <- unlist(strsplit(text, "[[:space:]]"))
     len <- length(splitText)
-    df$text[i] <- text
-    
+
     #Views
     df$views[i] <- as.integer(splitText[len-3])
     
@@ -132,11 +136,10 @@ parser <- function(links, limit = 0, step = 1) {
       postTime <- time - hours * 3600
       df$time[i] <- as.integer(postTime)
     } else {
-      year <- splitText[3]
-      month <- splitText[2]
-      day <- splitText[1]
+      year <- as.integer(splitText[3])
+      month <- which(months == splitText[2])
+      day <- as.integer(splitText[1])
       date <- ISOdate(year, month, day)
-      print(date)
       df$time[i] <- as.integer(date)
     }
   }
@@ -148,5 +151,6 @@ parser <- function(links, limit = 0, step = 1) {
   df$time <- unlist(df$time)
   df <- subset(df, !is.na(title))
   df$id <- seq.int(length(df$url))
+  beep()
   df
 }
