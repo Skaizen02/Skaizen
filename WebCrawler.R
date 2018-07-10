@@ -4,55 +4,16 @@ library(tm)
 library(beepr)
 
 url <- "https://www.finextra.com/"
-
-#Add titles to the database
-#addTitles()
-
-addTitles <- function() {
-  df <- data.frame(matrix(unlist(DATA)))
-  df <- na.omit(df)
-  names(df)[1] = "titles"
-  df <- data.frame(titles = unique(df$titles))
-  db <- dbReadTable(con, "webcrawler")
-  df$tags <- list(NULL)
-  df$tags[0:length(db$tags)] <- db$tags
-  df$id <- seq.int(length(df))
-  dbWriteTable(conn=con, name="webcrawler", value=df, row.names = FALSE, overwrite = TRUE)
-}
-
-#Add tags to the data base
-#addTags()
-
-addTags <- function() {
-  df <- data.frame(matrix(unlist(DATA)))
-  names(df)[1] = "tags"
-  df <- data.frame(titles = unique(df$titles))
-  db <- dbReadTable(con, "webcrawler")
-  df$tags <- list(NULL)
-  df$tags[0:length(db$tags)] <- db$tags
-  df$id <- seq.int(length(df$tags))
-  dbWriteTable(conn=con, name="webcrawler", value=df, row.names = FALSE, overwrite = TRUE)
-}
-
-#Find links
-# links <- c()
-# findLinks(url, 2)
-
+path <- "https://www.finextra.com/newsarticle"
 
 #Crawler
-titleSelector <- ".left.fullWidth:not(.left.fullWidth.upper.fontColorOne)"
-tagSelector <- ".ncMetaDataSnippet"
-statsSelector <- "#ctl00_ctl00_ConMainBody_ConMainBody_ctl01_lblInfo"
-
-months <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
-
 crawler <- function(iterations, url, path, step = 10) {
   links <- list(url)
   scannedLinks <- c()
   for (i in 0:iterations) {
     tmp <- links
     for (j in seq.int(length(links))) {
-      if (j%%step == 0 ) {
+      if (length(scannedLinks)%%step == 0 ) {
         print(sprintf("%s/%s : %s/%s", i, iterations, length(scannedLinks), length(tmp)))
       }
       link <- links[j][[1]]
@@ -74,16 +35,37 @@ crawler <- function(iterations, url, path, step = 10) {
     links[1] <- NULL
   }
   links <- lapply(links, function(x) as.character(x))
+  links <- unlist(links)
   links
 }
 
-parser <- function(links, limit = 0, step = 1) {
+#Parser
+selector <-   ".left.fullWidth:not(.left.fullWidth.upper.fontColorOne),
+              .ncMetaDataSnippet,
+              #ctl00_ctl00_ConMainBody_ConMainBody_ctl01_lblInfo,
+              #twitterResult,
+              #liResult,
+              #fbResult,
+              #reResult,
+              #goResult,
+              #emResult"
+
+months <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+
+parser <- function(links, limit = 0, step = 1, beep = T) {
+  startTime <- as.integer(Sys.time())
   df <- data.frame(url = unlist(links))
-  df$title <- unlist(list(NA))
-  df$postTags <- unlist(list(NA))
-  df$views <- unlist(list(NA))
-  df$comments <- unlist(list(NA))
-  df$time <- unlist(list(NA))
+  
+  df$twitter <- NA
+  df$linkedin <- NA
+  df$facebook <- NA
+  df$reddit <- NA
+  df$google <- NA
+  df$mail <- NA
+  df$title  <- NA
+  df$postTags <- NA
+  df$time <- NA
+  
   if (limit == 0) {
     l <- length(links)
   } else {
@@ -93,7 +75,58 @@ parser <- function(links, limit = 0, step = 1) {
   time <- Sys.time()
   
   for(i in seq.int(l)) {
+    link <- links[[i]]  
+    html <- read_html(link)
+    
+    data <- html_text(html_nodes(html, selector))
+    
+    #Social networks
+    df$twitter[i] <- data[1]
+    df$linkedin[i] <- data[2]
+    df$facebook[i] <- data[3]
+    df$reddit[i] <- data[4]
+    df$google[i] <- data[5]
+    df$mail[i] <- data[6]
+    
+    #Title
+    df$title[i] <- data[6]
+    
+    #Tags
+    if (length(data) > 8) {
+      df$postTags[i] <- paste(data[9:length(data)], collapse = ",")
+    }
+    
+    #Stats
+    stats <- unlist(strsplit(data[8], "[[:space:]]"))
+
+    #Views
+    df$views[i] <- as.integer(stats[7])
+    
+    #Comments
+    df$comments[i] <- as.integer(stats[12])
+    
+    #Time
+    timestamp <- as.integer(Sys.time())
+    if (stats[2] == "hours" || stats[2] == "hour") {
+      hours <- as.integer(stats[1])
+      df$time[i] <- time - hours * 3600
+    } else if (stats[2] == "minutes" || stats[2] == "minute") {
+      minutes <- as.integer(stats[1])
+      df$time[i] <- time - minutes * 60
+    } else {
+      year <- as.integer(stats[3])
+      month <- which(months == stats[2])
+      day <- as.integer(stats[1])
+      date <- ISOdate(year, month, day)
+      df$time[i] <- as.integer(date)
+    }
+    
+    #Progress information
     if (i %% step == 0) {
+      avgTime <- (as.integer(Sys.time()) - startTime) / i
+      remainingTime <- avgTime * (l-i)
+      seconds <- round(remainingTime %% 60)
+      minutes <- round((remainingTime - seconds) / 60)
       progress_bar <- paste(c("[", lapply(seq.int(25), function(x, progress) {
         if (x <= progress) {
           "#"
@@ -102,55 +135,19 @@ parser <- function(links, limit = 0, step = 1) {
         }
       }, round(i/l*25)), "] "), sep = "", collapse = "")
       stepindicator <- sprintf("%s/%s", i, l)
-      print(paste(c( progress_bar, stepindicator), sep = "", collapse = ""))
-    }
-    link <- links[[i]]  
-    html <- read_html(link)
-    
-    #Title
-    title_node <- html_node(html, titleSelector)
-    df$title[i] <- html_text(title_node)
-    
-    #Tags
-    tags_nodes <- html_nodes(html, tagSelector)
-    if (length(tags_nodes) > 0) {
-      tags <- paste(lapply(tags_nodes, function(x) html_text(x)), collapse = ",")
-      df$postTags[i] <- tags 
-    }
-    stats_node <- html_node(html, statsSelector)
-    text <- html_text(stats_node)
-    text <- stripWhitespace(text)
-    splitText <- unlist(strsplit(text, "[[:space:]]"))
-    len <- length(splitText)
-
-    #Views
-    df$views[i] <- as.integer(splitText[len-3])
-    
-    #Comments
-    df$comments[i] <- as.integer(splitText[len])
-    
-    #Time
-    timestamp <- as.integer(Sys.time())
-    if (splitText[2] == "hours") {
-      hours <- as.integer(splitText[1])
-      postTime <- time - hours * 3600
-      df$time[i] <- as.integer(postTime)
-    } else {
-      year <- as.integer(splitText[3])
-      month <- which(months == splitText[2])
-      day <- as.integer(splitText[1])
-      date <- ISOdate(year, month, day)
-      df$time[i] <- as.integer(date)
+      timeEstimate <- sprintf(" (%s minutes %s seconds)", minutes, seconds)
+      print(paste(c( progress_bar, stepindicator, timeEstimate), sep = " ", collapse = ""))
     }
   }
-  df$tags <- unlist(df$tags)
-  df$url <- unlist(df$url)
-  df$title <- unlist(df$title)
-  df$views <- unlist(df$views)
-  df$comments <- unlist(df$comments)
-  df$time <- unlist(df$time)
   df <- subset(df, !is.na(title))
   df$id <- seq.int(length(df$url))
-  beep()
-  df
+  if (beep) {
+    beep() 
+  }
+  df[1:length(df$title),]
+}
+
+go <- function() {
+  links <- crawler(2, url, path)
+  df <- parser(links, 100)
 }

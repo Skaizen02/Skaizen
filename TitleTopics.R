@@ -2,6 +2,7 @@ require(devtools)
 install_github("okugami79/sentiment140", force = TRUE)
 library(topicmodels)
 library(sentiment)
+library(ggplot2)
 
 sentiments <- sentiment(df$title)
 table(sentiments$polarity)
