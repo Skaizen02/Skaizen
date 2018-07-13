@@ -3,28 +3,44 @@ library(rvest)
 library(tm)
 library(beepr)
 
-url <- "https://www.finextra.com/"
-path <- "https://www.finextra.com/newsarticle"
+url = "https://www.finextra.com"
+path = "/newsarticle"
+
+#Link Extraction
+extractor = function(page) {
+  pageLinks = ""
+  tryCatch({
+    html = read_html(url(page, "rb"))
+    nodes = html_nodes(html, "a")
+    pageLinks = html_attr(nodes, 'href')
+  }, error = function(err) {
+    print(err)
+    print(page)
+  })
+  closeAllConnections()
+  return(pageLinks)
+}
 
 #Crawler
-crawler <- function(iterations, url, path, step = 10) {
+crawler <- function(iterations, url, path, step = 10, n = 100) {
   links <- list(url)
   scannedLinks <- c()
   for (i in 0:iterations) {
     tmp <- links
     for (j in seq.int(length(links))) {
       if (length(scannedLinks)%%step == 0 ) {
-        print(sprintf("%s/%s : %s/%s", i, iterations, length(scannedLinks), length(tmp)))
+        print(sprintf("%s/%s : %s/%s", i, iterations, length(scannedLinks), n))
       }
-      link <- links[j][[1]]
+      if (length(scannedLinks) >= n) {
+        break
+      }
+      link <- links[[j]]
       if (!(link %in% scannedLinks)) {
-        pageLinks <- LinkExtractor(link)[[2]]
-        pageLinks <- c(lapply(pageLinks, function (x) {
-          if (startsWith(x, path)) {
-            x
-          }
-        }))
-        pageLinks <- pageLinks[!sapply(pageLinks, is.null)]
+        pageLinks <- extractor(link)
+        pageLinks = pageLinks[which(startsWith(pageLinks, path))]
+        pageLinks = lapply(pageLinks, function(x) {
+          paste(url, x, sep = "")
+        })
         tmp <- c(tmp, pageLinks)
         scannedLinks <- c(scannedLinks, link)
       }
@@ -35,7 +51,7 @@ crawler <- function(iterations, url, path, step = 10) {
     links[1] <- NULL
   }
   links <- lapply(links, function(x) as.character(x))
-  links <- unlist(links)
+  links = unlist(links)
   links
 }
 
@@ -81,12 +97,12 @@ parser <- function(links, limit = 0, step = 1, beep = T) {
     data <- html_text(html_nodes(html, selector))
     
     #Social networks
-    df$twitter[i] <- data[1]
-    df$linkedin[i] <- data[2]
-    df$facebook[i] <- data[3]
-    df$reddit[i] <- data[4]
-    df$google[i] <- data[5]
-    df$mail[i] <- data[6]
+    df$twitter[i] <- as.integer(data[1])
+    df$linkedin[i] <- as.integer(data[2])
+    df$facebook[i] <- as.integer(data[3])
+    df$reddit[i] <- as.integer(data[4])
+    df$google[i] <- as.integer(data[5])
+    df$mail[i] <- as.integer(data[6])
     
     #Title
     df$title[i] <- data[6]
