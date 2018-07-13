@@ -72,15 +72,16 @@ parser <- function(links, limit = 0, step = 1, beep = T) {
   startTime <- as.integer(Sys.time())
   df <- data.frame(url = unlist(links))
   
-  df$twitter <- NA
-  df$linkedin <- NA
-  df$facebook <- NA
-  df$reddit <- NA
-  df$google <- NA
-  df$mail <- NA
-  df$title  <- NA
-  df$postTags <- NA
-  df$time <- NA
+  # df$twitter <- NA
+  # df$linkedin <- NA
+  # df$facebook <- NA
+  # df$reddit <- NA
+  # df$google <- NA
+  # df$mail <- NA
+  df$social = NA
+  df$title  = NA
+  df$postTags = NA
+  df$time = NA
   
   if (limit == 0) {
     l <- length(links)
@@ -97,12 +98,13 @@ parser <- function(links, limit = 0, step = 1, beep = T) {
     data <- html_text(html_nodes(html, selector))
     
     #Social networks
-    df$twitter[i] <- as.integer(data[1])
-    df$linkedin[i] <- as.integer(data[2])
-    df$facebook[i] <- as.integer(data[3])
-    df$reddit[i] <- as.integer(data[4])
-    df$google[i] <- as.integer(data[5])
-    df$mail[i] <- as.integer(data[6])
+    df$social[i] = sum(data[1:6])
+    # df$twitter[i] <- as.integer(data[1])
+    # df$linkedin[i] <- as.integer(data[2])
+    # df$facebook[i] <- as.integer(data[3])
+    # df$reddit[i] <- as.integer(data[4])
+    # df$google[i] <- as.integer(data[5])
+    # df$mail[i] <- as.integer(data[6])
     
     #Title
     df$title[i] <- data[6]
