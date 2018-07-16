@@ -28,11 +28,10 @@
 #' res <- fetch_products("name:iphone")
 #' }
 fetch_products <- function(query,
-                           sort = "relevancy",
                            ts = (Sys.time() - (3 * 24 * 60 * 60)),
                            pre_alloc_max = 30,
                            quiet = !interactive(),
-                           token = Sys.getenv("WEBHOSE_TOKEN"),
+                           token,
                            ...) {
   
   results <- vector(mode = "list", length = pre_alloc_max)
@@ -41,13 +40,11 @@ fetch_products <- function(query,
   i <- 1
   from <- 0
   repeat {
-    res <- filter_products(query=query,
-                           sort=sort,
+    df <- filter_products(query=query,
                            ts=ts,
-                           size=100,
                            from=from,
                            token=token,
-                           quiet=TRUE,
+                           quiet=quiet,
                            ...)
     
     results[[i]] <- res

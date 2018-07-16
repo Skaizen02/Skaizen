@@ -17,20 +17,20 @@ library(corrr)
 # install_keras()
 
 # Import data
-churn_data_raw <- read_csv("WA_Fn-UseC_-Telco-Customer-Churn.csv")
-glimpse(churn_data_raw)
+likes_data_raw =  df
+glimpse(likes_data_raw)
 
 # Remove unnecessary data
-churn_data_tbl <- churn_data_raw %>%
+likes_data_tbl <- popularity_data_raw %>%
   select(-customerID) %>%
   drop_na() %>%
-  select(Churn, everything())
+  select(Likes, everything())
 
-glimpse(churn_data_tbl)
+glimpse(likes_data_tbl)
 
 # Split test/training sets
 set.seed(100)
-train_test_split <- initial_split(churn_data_tbl, prop = 0.8)
+train_test_split <- initial_split(likes_data_tbl, prop = 0.8)
 train_test_split
 
 # Retrieve train and test sets

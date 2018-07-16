@@ -35,13 +35,14 @@
 #' res <- fetch_posts("(China AND United) language:english site_type:news site:bloomberg.com",
 #'                             ts = 1213456)
 #' }
-fetch_posts <- function(query, sort = "relevancy",
-                        ts = (Sys.time() - (3 * 24 * 60 * 60)),
-                        order = "desc",
-                        accuracy_confidence = NULL, highlight = FALSE,
-                        pre_alloc_max = 30, quiet = !interactive(),
-                        token = Sys.getenv("WEBHOSE_TOKEN"),
+fetch_posts <- function(query,
+                        days = 3,
+                        pre_alloc_max = 30,
+                        quiet = !interactive(),
+                        token,
                         ...) {
+  
+  ts = as.numeric(Sys.time() - (days * 24 * 60 * 60))
   
   results <- vector(mode = "list", length = pre_alloc_max)
   res <- NULL
@@ -49,11 +50,18 @@ fetch_posts <- function(query, sort = "relevancy",
   i <- 1
   from <- 0
   repeat {
-    res <- filter_posts(query=query, sort=sort, ts=ts, order=order, size=100,
-                        accuracy_confidence=accuracy_confidence, highlight=highlight,
-                        from=from, token=token, quiet=TRUE, ...)
+    res <- filter_posts(query=query,
+                        ts=ts,
+                        size=100,
+                        from=from,
+                        token=token,
+                        quiet=TRUE, ...)
     
-    results[[i]] <- res
+    if (i == 1) {
+      df = data.frame(res[["posts"]])
+    } else {
+      df = rbind(df, data.frame(res[["posts"]]))
+    }
     if (res[["moreResultsAvailable"]] > 0) {
       if (!quiet) message("Fetching next 100 records...")
       i <- i + 1
@@ -65,10 +73,11 @@ fetch_posts <- function(query, sort = "relevancy",
   
   if (!quiet) message(sprintf("You have %s API calls remaining on your plan",
                               comma(res$requestsLeft)))
+
+  mcga(df)
   
-  purrr::discard(results, is.null) %>%
-    purrr::map_df(~{ .x$posts }) %>%
-    tibble::as_tibble() %>%
-    mcga()
-  
+  # purrr::discard(results, is.null) %>%
+  #   purrr::map_df(~{ .x$posts }) %>%
+  #   tibble::as_tibble() %>%
+  #   mcga()
 }

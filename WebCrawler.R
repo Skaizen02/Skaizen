@@ -98,7 +98,7 @@ parser <- function(links, limit = 0, step = 1, beep = T) {
     data <- html_text(html_nodes(html, selector))
     
     #Social networks
-    df$social[i] = sum(data[1:6])
+    df$social[i] = sum(as.numeric(data[1:6]))
     # df$twitter[i] <- as.integer(data[1])
     # df$linkedin[i] <- as.integer(data[2])
     # df$facebook[i] <- as.integer(data[3])
@@ -107,7 +107,7 @@ parser <- function(links, limit = 0, step = 1, beep = T) {
     # df$mail[i] <- as.integer(data[6])
     
     #Title
-    df$title[i] <- data[6]
+    df$title[i] <- data[7]
     
     #Tags
     if (length(data) > 8) {

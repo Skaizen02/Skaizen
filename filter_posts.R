@@ -38,39 +38,17 @@
 #' res <- filter_posts("(China AND United) language:english site_type:news site:bloomberg.com",
 #'                             ts = 1213456)
 #' }
-filter_posts <- function(query, sort = "relevancy",
-                         ts = (Sys.time() - (3 * 24 * 60 * 60)),
-                         order = "desc", size = 100,
-                         accuracy_confidence = NULL, highlight = FALSE,
-                         from = 0, quiet = !interactive(),
-                         token = "aa92dd93-d2ca-40a2-aac4-42dd56523ada", ...) {
+filter_posts <- function(query,
+                         ts = (Sys.time() - (3 * 24 * 60 * 60))
+                         , size = 100,
+                         from = 0, 
+                         quiet = !interactive(),
+                         token, ...) {
   
-  if (inherits(ts, "POSIXct")) ts <- as.numeric(ts)
-  
-  sort <- match.arg(tolower(sort[1]), sort_params)
-  order <- match.arg(tolower(order[1]), c("asc", "desc"))
-  
-  params <- list(
-    token = token,
-    format = "json",
-    q = query,
-    sort = sort,
-    order = order,
-    size = size,
-    ts = ts,
-    from = from,
-    highlight = highlight
-  )
-  
-  if (!is.null(accuracy_confidence)) {
-    accuracy_confidence <- match.arg(accuracy_confidence, "high")
-    params$accuracy_confidence = accuracy_confidence
-  }
+  #if (inherits(ts, "POSIXct")) ts <- as.numeric(ts)
   
   httr::GET(
-    url = "https://webhose.io/filterWebContent",
-    query = params,
-    ...
+    url = sprintf("https://webhose.io/filterWebContent?token=35fecc93-2eb8-4c3c-ad60-45b9ffe8cfd5&format=json&size=100&from=%s&ts=%s&q=%s&sort=relevancy", from, ts, query)
   ) -> res
   
   httr::stop_for_status(res)

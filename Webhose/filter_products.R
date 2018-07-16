@@ -31,33 +31,13 @@
 #' res <- filter_products("name:iphone")
 #' }
 filter_products <- function(query,
-                            sort = "relevancy",
                             ts = (Sys.time() - (3 * 24 * 60 * 60)),
                             size = 100,
                             from = 0,
                             quiet = !interactive(),
-                            token = Sys.getenv("WEBHOSE_TOKEN"), ...) {
+                            token, ...) {
   
   if (inherits(ts, "POSIXct")) ts <- as.numeric(ts)
-  
-  sort <- match.arg(tolower(sort[1]), sort_params)
-  order <- match.arg(tolower(order[1]), c("asc", "desc"))
-  
-  params <- list(
-    token = token,
-    format = "json",
-    q = query,
-    sort = sort,
-    size = size,
-    ts = ts,
-    from = from
-    #highlight = highlight
-  )
-  
-  # if (!is.null(accuracy_confidence)) {
-  #   accuracy_confidence <- match.arg(accuracy_confidence, "high")
-  #   params$accuracy_confidence = accuracy_confidence
-  # }
   
   httr::GET(
     url = "http://webhose.io/productFilter",
