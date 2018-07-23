@@ -75,21 +75,34 @@ parser <- function(links, limit = 0, step = 1, beep = F) {
   } else {
     l <- limit
   }
-  pb <- progress_bar$new(total = l, format = ":spin [:bar] :percent(:i/:total : :tick_rate) : :elapsed/:eta")
+  pb <- progress_bar$new(total = l, format = ":spin [:bar] :percent : :elapsed/:eta")
   time <- Sys.time()
   
   for(i in seq.int(l)) {
-    link <- links[[i]]  
+    link <- links[[i]]
     html <- read_html(link)
+    
+    html_time <- as.numeric(Sys.time())
+    print("HTML")
+    print((html_time - startTime)*1000)
     
     #Social networks
     df$social[i] <- getSocial(html)
+    social_time <- as.numeric(Sys.time())
+    print("Social")
+    print((social_time - html_time)*1000)
     
     #Title
     df$title[i] <- getTitle(html)
+    title_time <- as.numeric(Sys.time())
+    print("Title")
+    print((title_time - social_time)*1000)
     
     #Text
     df$text[i] <- getText(html)
+    text_time <- as.numeric(Sys.time())
+    print("Text")
+    print((social_time - text_time)*1000)
     
     #Tags
     df$postTags[i] <- getTags(html)
@@ -103,7 +116,7 @@ parser <- function(links, limit = 0, step = 1, beep = F) {
     #Time
     df$time[i] <- getTime(html)
     
-    pb$tick(tokens = list(i = as.character(i)))
+    pb$tick()
   }
   df <- subset(df, !is.na(title))
   df$id <- seq.int(length(df$url))
